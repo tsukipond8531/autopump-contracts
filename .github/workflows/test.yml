@@ -1,0 +1,45 @@
+name: Test workflow
+on: push
+jobs:
+  lint:
+    name: Lint sources
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout
+        uses: "actions/checkout@master"
+      - name: Set Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Lint sources
+        run: yarn run lint
+  check:
+    runs-on: ubuntu-latest
+    env: 
+      MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test -vvv
+        id: test
