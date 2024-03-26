@@ -5,7 +5,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import "forge-std/console.sol";
 import {
     UNISWAP_V2_ROUTER02,
-    SUSHISWAP_V2_ROUTER02,
+    SUSHISWAP_V2_ROUTER02
 } from "test/utils/constant_eth.sol";
 
 import {AutoPump, IAutoPump} from "../src/AutoPump.sol";
