@@ -24,9 +24,9 @@ contract AutoPumpTest is Test {
 
     uint256 mainnetFork;
     uint256 totalSupply = 1e12 ether;
-    uint256 burnFee = 5;
-    uint256 liqFee = 2;
-    uint256 pumpFee = 3;
+    uint256 burnFee = 500;
+    uint256 liqFee = 200;
+    uint256 pumpFee = 300;
     IAutoPump.Fees fees = IAutoPump.Fees(burnFee, pumpFee, liqFee);
     string MAINNET_RPC_URL = vm.envString("MAINNET_RPC_URL");
     address owner;
@@ -95,7 +95,7 @@ function testSetRouter() public {
     }
 
     function testSetFees() public {
-        IAutoPump.Fees memory fee = IAutoPump.Fees(2, 3, 4);
+        IAutoPump.Fees memory fee = IAutoPump.Fees(200, 300, 400);
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, buyer));
         vm.prank(buyer);
@@ -106,9 +106,9 @@ function testSetRouter() public {
 
         (uint256 _burnFee, uint256 _pumpFee, uint256 _liquifyFee) = token.fees();
 
-        assertEq(_burnFee, 2);
-        assertEq(_pumpFee, 3);
-        assertEq(_liquifyFee, 4);
+        assertEq(_burnFee, 200);
+        assertEq(_pumpFee, 300);
+        assertEq(_liquifyFee, 400);
     }
 
     function testSetThreshold() public {
@@ -196,8 +196,8 @@ function testSetRouter() public {
         uint256 tokenBalAfter = token.balanceOf(address(token));
         uint256 totlaSupplyAfter = token.totalSupply();
 
-        uint256 expectedLiquifyFee = amountToSell * liqFee / 100;
-        uint256 expectedBurnFee = amountToSell * burnFee / 100;
+        uint256 expectedLiquifyFee = amountToSell * liqFee / 1e4;
+        uint256 expectedBurnFee = amountToSell * burnFee / 1e4;
 
         assert(ethBalAfter > ethBalBefore);
         assertEq(buyerBalBefore - buyerBalAfter, amountToSell);
@@ -221,8 +221,8 @@ function testSetRouter() public {
         uint256 tokenBalAfter = token.balanceOf(address(token));
         uint256 totlaSupplyAfter = token.totalSupply();
 
-        uint256 expectedLiquifyFee = amountToSell * liqFee / 100;
-        uint256 expectedBurnFee = amountToSell * burnFee / 100;
+        uint256 expectedLiquifyFee = amountToSell * liqFee / 1e4;
+        uint256 expectedBurnFee = amountToSell * burnFee / 1e4;
 
         assert(ethBalAfter > ethBalBefore);
         assertEq(buyerBalBefore - buyerBalAfter, amountToSell);
@@ -356,12 +356,12 @@ function testSetRouter() public {
         
         assert(address(token).balance > ethBalBefore);
 
-        uint256 expectedBurnFee = amountToTransfer * burnFee / 100;
+        uint256 expectedBurnFee = amountToTransfer * burnFee / 1e4;
 
         assertEq(totalSupplyBefore - token.totalSupply(), expectedBurnFee);
 
-        uint256 expectedLiquifyFee = amountToTransfer * liqFee / 100;
-        uint256 expectedPumpFee = amountToTransfer * pumpFee / 100;
+        uint256 expectedLiquifyFee = amountToTransfer * liqFee / 1e4;
+        uint256 expectedPumpFee = amountToTransfer * pumpFee / 1e4;
         uint256 totalFee = expectedPumpFee + expectedBurnFee + expectedLiquifyFee;
 
         assertEq(receiverBalAfter - receiverBalBefore, amountToTransfer - totalFee);
