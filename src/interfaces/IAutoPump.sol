@@ -67,8 +67,8 @@ interface IAutoPump is IERC20 {
 
     /**
      * @dev Emit when new fees are set by owner
-     * @param oldfees the old fees including dev, burn, pump and liquify fees
-     * @param newFees the new fees including dev, burn, pump and liquify fees
+     * @param oldfees the old fees including burn, pump and liquify fees
+     * @param newFees the new fees including burn, pump and liquify fees
      */
     event FeesUpdated(Fees oldfees, Fees newFees);
 
@@ -125,7 +125,7 @@ interface IAutoPump is IERC20 {
     /**
      * @dev Set new fees
      * @dev Only callable by owner
-     * @param _fees struct of fees including dev, burn, pump and liquify fee percentages
+     * @param _fees struct of fees including burn, pump and liquify fee percentages
      */
     function setFees(Fees memory _fees) external;
 }

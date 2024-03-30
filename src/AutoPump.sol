@@ -13,7 +13,7 @@ import {IAutoPump} from "src/interfaces/IAutoPump.sol";
 contract AutoPump is ERC20, Ownable, IAutoPump {
     mapping(address => bool) public _isExcludedFromFee;
 
-    /// @dev fees percentage without decimals
+    /// @dev fees percentage with 2 decimals
     Fees public fees;
 
     /**
@@ -304,7 +304,7 @@ contract AutoPump is ERC20, Ownable, IAutoPump {
         address from,
         uint256 _amount
     ) private returns (uint256 liquidifyFee) {
-        liquidifyFee = (_amount * fees.liquifyFee) / 100;
+        liquidifyFee = (_amount * fees.liquifyFee) / 1e4;
         super._update(from, address(this), liquidifyFee);
     }
 
@@ -315,19 +315,19 @@ contract AutoPump is ERC20, Ownable, IAutoPump {
         address from,
         uint256 _amount
     ) private returns (uint256 burnFee) {
-        burnFee = (_amount * fees.burnFee) / 100;
+        burnFee = (_amount * fees.burnFee) / 1e4;
         super._update(from, address(0), burnFee);
     }
 
     /**
-     * @dev Calculates pump fee and swaps immidietly to accumulate ETH
+     * @dev Calculates pump fee and swaps immediately to accumulate ETH
      */
     function _takePumpFee(
         address from,
         uint256 _amount,
         IUniswapV2Router02 router
     ) private returns (uint256 pumpFee) {
-        pumpFee = (_amount * fees.pumpFee) / 100;
+        pumpFee = (_amount * fees.pumpFee) / 1e4;
         super._update(from, address(this), pumpFee);
         _swapTokensForEth(pumpFee, router);
     }
