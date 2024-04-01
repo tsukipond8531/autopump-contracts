@@ -180,9 +180,15 @@ contract AutoPump is ERC20, Ownable, IAutoPump {
         bool passedLiquifyThreshold = balanceOf(address(this)) >
             liquifyTokenThreshold;
         bool passedPumpThreshold = address(this).balance > pumpEthThreshold;
-        IUniswapV2Router02 router = block.timestamp % 2 == 0
-            ? uniswapV2Router
-            : uniswapV2Router2;
+
+        IUniswapV2Router02 router = uniswapV2Router;
+        IUniswapV2Router02 router2 = uniswapV2Router2;
+
+        if (block.timestamp % 2 == 1) {
+            router = uniswapV2Router2;
+            router2 = uniswapV2Router;
+        }
+
         if (
             passedLiquifyThreshold &&
             !inSwapAndLiquify &&
@@ -204,12 +210,9 @@ contract AutoPump is ERC20, Ownable, IAutoPump {
         if (!_isExcludedFromFee[from] && !_isExcludedFromFee[to]) {
             uint256 totalFee = _takeBurnFee(from, value) +
                 _takeLiquidifyFee(from, value);
-            if (
-                to != uniswapV2Pair &&
-                from != uniswapV2Pair &&
-                to != uniswapV2Pair2 &&
-                from != uniswapV2Pair2
-            ) {
+            if (!inSwapAndLiquify) {
+                if (from == uniswapV2Pair2 || to == uniswapV2Pair2)
+                    router = router2;
                 totalFee += _takePumpFee(from, value, router);
             }
             value -= totalFee;
@@ -252,6 +255,7 @@ contract AutoPump is ERC20, Ownable, IAutoPump {
         path[0] = address(this);
         path[1] = router.WETH();
         _approve(address(this), address(router), tokenAmount);
+
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             tokenAmount,
             0, // accept any amount of ETH
@@ -326,7 +330,7 @@ contract AutoPump is ERC20, Ownable, IAutoPump {
         address from,
         uint256 _amount,
         IUniswapV2Router02 router
-    ) private returns (uint256 pumpFee) {
+    ) private lockTheSwap returns (uint256 pumpFee) {
         pumpFee = (_amount * fees.pumpFee) / 1e4;
         super._update(from, address(this), pumpFee);
         _swapTokensForEth(pumpFee, router);
