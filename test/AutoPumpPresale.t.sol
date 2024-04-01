@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity 0.8.23;
 
 import "forge-std/console.sol";
-import {Test, console2} from "forge-std/Test.sol";
-import {IAutoPumpPresale} from "../src/interfaces/IAutoPumpPresale.sol";
-import {AutoPumpPresale} from "../src/AutoPumpPresale.sol";
-import {AutoPump, IAutoPump} from "../src/AutoPump.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { Test, console2 } from "forge-std/Test.sol";
+import { IAutoPumpPresale } from "../src/interfaces/IAutoPumpPresale.sol";
+import { AutoPumpPresale } from "../src/AutoPumpPresale.sol";
+import { AutoPump, IAutoPump } from "../src/AutoPump.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import {
-    UNISWAP_V2_ROUTER02,
-    SUSHISWAP_V2_ROUTER02
-} from "test/utils/constant_eth.sol";
+import { UNISWAP_V2_ROUTER02, SUSHISWAP_V2_ROUTER02, PANCAKESWAP_V2_ROUTER02, FRAXSWAP_V2_ROUTER02 } from "test/utils/constant_eth.sol";
 
 contract AutoPumpPresaleTest is Test {
     AutoPumpPresale public autoPumpPresale;
@@ -42,17 +39,12 @@ contract AutoPumpPresaleTest is Test {
             "AutoPump",
             "AUTO",
             1_000_000_000_000 ether, // Initial supply
-            IAutoPump.Fees({burnFee: 2, pumpFee: 3, liquifyFee: 4}),
+            IAutoPump.Fees({ burnFee: 2, pumpFee: 3, liquifyFee: 4 }),
             UNISWAP_V2_ROUTER02,
             SUSHISWAP_V2_ROUTER02 // Assuming this constructor takes two routers
         );
 
-        autoPumpPresale = new AutoPumpPresale(
-            treasuryWallet,
-            ERC20(address(autoPumpToken)),
-            fundraisingGoal,
-            rate
-        );
+        autoPumpPresale = new AutoPumpPresale(treasuryWallet, ERC20(address(autoPumpToken)), fundraisingGoal, rate);
 
         // Initialize user addresses.
         // Use vm.addr to generate addresses with ETH for testing
@@ -76,20 +68,29 @@ contract AutoPumpPresaleTest is Test {
         assertEq(autoPumpPresale.rate(), rate);
     }
 
+    function testRevertSetToken() public {
+        vm.prank(buyer1);
+        vm.expectRevert();
+        autoPumpPresale.setToken(address(1));
+
+        vm.expectRevert("Invalid Token Address");
+        autoPumpPresale.setToken(address(0));
+    }
+
     function testRevertOpenPresale() public {
-      vm.expectRevert("Presale already opened");
-      autoPumpPresale.openPresale();
+        vm.expectRevert("Presale already opened");
+        autoPumpPresale.openPresale();
     }
 
     function testBuyTokens() public {
         uint256 purchaseAmount = 10 ether;
-        (bool success, ) = payable(address(autoPumpPresale)).call{value: purchaseAmount}("");
+        (bool success, ) = payable(address(autoPumpPresale)).call{ value: purchaseAmount }("");
         assertTrue(success);
-        
-        uint256 targetedPresaleTokenBalance = purchaseAmount * rate / autoPumpPresale.PRECISION_MULTIPLIER();
+
+        uint256 targetedPresaleTokenBalance = (purchaseAmount * rate) / autoPumpPresale.PRECISION_MULTIPLIER();
 
         uint256 presaleTokenBalance = autoPumpPresale.getTokenBalance(address(this));
-        
+
         assertEq(autoPumpPresale.raisedAmount(), purchaseAmount);
         assertEq(presaleTokenBalance, targetedPresaleTokenBalance);
     }
@@ -102,7 +103,7 @@ contract AutoPumpPresaleTest is Test {
         vm.deal(address(nonReceivable), purchaseAmount);
         vm.prank(address(nonReceivable));
         vm.expectRevert("Refund failed");
-        (success, ) = payable(address(autoPumpPresale)).call{value: purchaseAmount}("");
+        (success, ) = payable(address(autoPumpPresale)).call{ value: purchaseAmount }("");
 
         assertTrue(success);
     }
@@ -114,14 +115,14 @@ contract AutoPumpPresaleTest is Test {
 
         autoPumpPresale.setTreasuryWallet(address(nonReceivable));
         vm.expectRevert("Failed to send Accepted Wei");
-        (success, ) = payable(address(autoPumpPresale)).call{value: purchaseAmount}("");
+        (success, ) = payable(address(autoPumpPresale)).call{ value: purchaseAmount }("");
         assertTrue(success);
     }
 
     function testClosePresale() public {
         // Assuming ether contributions have been made to the presale
         uint256 contributionAmount = 1 ether;
-        (bool success, ) = payable(address(autoPumpPresale)).call{value: contributionAmount}("");
+        (bool success, ) = payable(address(autoPumpPresale)).call{ value: contributionAmount }("");
         assertTrue(success);
 
         // Check if contributions are recorded correctly
@@ -141,13 +142,19 @@ contract AutoPumpPresaleTest is Test {
         assertEq(autoPumpPresale.treasuryWallet(), owner);
     }
 
+    function testSetToken() public {
+        autoPumpPresale.setToken(address(1));
+
+        // Verify that the token is marked for the owner
+        assertEq(address(autoPumpPresale.token()), address(1));
+    }
+
     function testWithdraw() public {
         autoPumpPresale.withdraw(address(this), autoPumpToken.balanceOf(address(autoPumpPresale)));
 
         // Verify that the treasury wallet is marked for the owner
         assertEq(autoPumpToken.balanceOf(address(autoPumpPresale)), 0);
     }
-
 
     function testRevertSetTreasuryWallet() public {
         vm.expectRevert("Invalid Wallet Address");
@@ -158,26 +165,25 @@ contract AutoPumpPresaleTest is Test {
         // Example setup: A buyer contributes 1 ETH.
         uint256 contribution = 1 ether;
         vm.deal(address(this), contribution);
-        autoPumpPresale.buyTokens{value: contribution}();
+        autoPumpPresale.buyTokens{ value: contribution }();
 
         // Close the presale to proceed with eligibility calculations.
         autoPumpPresale.closePresale();
 
         // Assuming a direct 1 ETH: 100 tokens for simplicity.
-        uint256 expectedEligibleTokens = contribution * rate / autoPumpPresale.PRECISION_MULTIPLIER(); // Adjust according to your distribution rules.
+        uint256 expectedEligibleTokens = (contribution * rate) / autoPumpPresale.PRECISION_MULTIPLIER(); // Adjust according to your distribution rules.
         // console2.log("expectedEligibleTokens", expectedEligibleTokens);
 
         uint256 actualEligibleTokens = autoPumpPresale.getTokenBalance(address(this));
         assertEq(actualEligibleTokens, expectedEligibleTokens, "Total eligible tokens should match contribution");
     }
 
-
     function testContributionExceedsFundraisingGoal() public {
         uint256 excessContribution = 200 ether;
 
         // Simulate sending ETH to buy tokens, exceeding the fundraising goal
         vm.deal(address(this), excessContribution);
-        autoPumpPresale.buyTokens{value: excessContribution}();
+        autoPumpPresale.buyTokens{ value: excessContribution }();
 
         // Check if the weiRaised in the presale contract matches the fundraising goal exactly
         assertEq(autoPumpPresale.raisedAmount(), fundraisingGoal);
@@ -196,11 +202,15 @@ contract AutoPumpPresaleTest is Test {
 
         // Expectation: The transaction should revert because the presale is closed
         vm.expectRevert("Presale is closed");
-        autoPumpPresale.buyTokens{value: contributionAfterClose}();
+        autoPumpPresale.buyTokens{ value: contributionAfterClose }();
 
         // Optionally, verify no change in weiRaised and contributor's balance to ensure no contribution was accepted
         assertEq(autoPumpPresale.raisedAmount(), 0, "No funds should be raised after presale ends");
-        assertEq(address(this).balance, contributionAfterClose, "Contributor should retain their funds after failed contribution");
+        assertEq(
+            address(this).balance,
+            contributionAfterClose,
+            "Contributor should retain their funds after failed contribution"
+        );
     }
 
     function testRevertClosePresale() public {
@@ -214,7 +224,7 @@ contract AutoPumpPresaleTest is Test {
         // Buyer contributes some amount (e.g., 1 ETH).
         uint256 contribution = 1 ether;
         vm.deal(address(this), contribution);
-        autoPumpPresale.buyTokens{value: contribution}();
+        autoPumpPresale.buyTokens{ value: contribution }();
 
         // Presale is closed to proceed to the withdrawal phase.
         autoPumpPresale.closePresale();
@@ -228,19 +238,23 @@ contract AutoPumpPresaleTest is Test {
 
         // Expected eligible tokens to be zero because lock up period didn't end yet.
         uint256 expectedEligibleTokens = 0;
-        
+
         // Get the actual remaining tokens that can be claimed.
         uint256 actualRemainingTokens = autoPumpPresale.calculateEligibleTokens(address(this));
-        
+
         // Verify the remaining tokens match the expected amount.
-        assertEq(actualRemainingTokens, expectedEligibleTokens, "Buyer should have no remaining tokens to claim after withdrawal.");
+        assertEq(
+            actualRemainingTokens,
+            expectedEligibleTokens,
+            "Buyer should have no remaining tokens to claim after withdrawal."
+        );
     }
 
     function testRevertWithdrawTokensOnOpenedPresale() public {
         // Buyer contributes some amount (e.g., 1 ETH).
         uint256 contribution = 1 ether;
         vm.deal(address(this), contribution);
-        autoPumpPresale.buyTokens{value: contribution}();
+        autoPumpPresale.buyTokens{ value: contribution }();
 
         // Fast-forward time beyond the presale end but the lock up period didn't end yet.
         vm.warp(block.timestamp + 4 days);
@@ -251,12 +265,16 @@ contract AutoPumpPresaleTest is Test {
 
         // Expected eligible tokens to be zero because lock up period didn't end yet.
         uint256 expectedEligibleTokens = 0;
-        
+
         // Get the actual remaining tokens that can be claimed.
         uint256 actualRemainingTokens = autoPumpPresale.calculateEligibleTokens(address(this));
-        
+
         // Verify the remaining tokens match the expected amount.
-        assertEq(actualRemainingTokens, expectedEligibleTokens, "Buyer should have no remaining tokens to claim after withdrawal.");
+        assertEq(
+            actualRemainingTokens,
+            expectedEligibleTokens,
+            "Buyer should have no remaining tokens to claim after withdrawal."
+        );
     }
 
     function testWithdrawTokensAndCheckRemaining() public {
@@ -264,7 +282,7 @@ contract AutoPumpPresaleTest is Test {
         uint256 contribution = 1 ether;
         vm.deal(buyer1, contribution);
         vm.prank(buyer1);
-        autoPumpPresale.buyTokens{value: contribution}();
+        autoPumpPresale.buyTokens{ value: contribution }();
 
         // Presale is closed to proceed to the withdrawal phase.
         vm.prank(address(this));
@@ -280,10 +298,18 @@ contract AutoPumpPresaleTest is Test {
         // Get the actual remaining tokens that can be claimed.
         uint256 actualRemainingTokens = autoPumpPresale.calculateEligibleTokens(buyer1);
         uint256 buyerTotalWithdrawn = autoPumpPresale.getTotalTokensWithdrawn(buyer1);
-        
+
         // Verify the remaining tokens match the expected amount.
-        assertEq(actualRemainingTokens, 0, "Buyer should have no remaining tokens to claim after withdrawal at that period of time.");
-        assertEq(buyerTotalWithdrawn, autoPumpToken.balanceOf(buyer1), "Buyer should have withrawn a batch of his tokens.");
+        assertEq(
+            actualRemainingTokens,
+            0,
+            "Buyer should have no remaining tokens to claim after withdrawal at that period of time."
+        );
+        assertEq(
+            buyerTotalWithdrawn,
+            autoPumpToken.balanceOf(buyer1),
+            "Buyer should have withrawn a batch of his tokens."
+        );
     }
 
     function testGradualWithdrawal() public {
@@ -291,7 +317,7 @@ contract AutoPumpPresaleTest is Test {
         uint256 contribution = 1 ether;
         vm.deal(buyer1, contribution);
         vm.prank(buyer1);
-        autoPumpPresale.buyTokens{value: contribution}();
+        autoPumpPresale.buyTokens{ value: contribution }();
 
         // Close the presale.
         vm.prank(address(this));
@@ -309,7 +335,7 @@ contract AutoPumpPresaleTest is Test {
 
             if (remainingAmountClaimableBeforeWithdrawal > 0) {
                 // Attempt withdrawal only if eligible tokens are > 0.
-                if(block.timestamp < autoPumpPresale.closedPresaleTime() + autoPumpPresale.LOCKUP_PERIOD_DAYS()) {
+                if (block.timestamp < autoPumpPresale.closedPresaleTime() + autoPumpPresale.LOCKUP_PERIOD_DAYS()) {
                     vm.expectRevert("Lockup period not ended");
                     autoPumpPresale.withdrawTokens();
                 } else {
@@ -318,25 +344,32 @@ contract AutoPumpPresaleTest is Test {
 
                 uint256 balanceAfterWithdrawal = autoPumpToken.balanceOf(buyer1);
 
-                assertEq(balanceBeforeWithdrawal + remainingAmountClaimableBeforeWithdrawal , balanceAfterWithdrawal, "Mismatch in remaining tokens after withdrawal.");
-            } 
+                assertEq(
+                    balanceBeforeWithdrawal + remainingAmountClaimableBeforeWithdrawal,
+                    balanceAfterWithdrawal,
+                    "Mismatch in remaining tokens after withdrawal."
+                );
+            }
         }
 
         uint256 balanceAfterPresale = autoPumpToken.balanceOf(buyer1);
         uint256 totalTokensWithdrawn = autoPumpPresale.getTotalTokensWithdrawn(buyer1);
 
-        assertEq(balanceAfterPresale , totalTokensWithdrawn, "Mismatch in total withdrawn tokens after presale.");
-        assertEq(balanceAfterPresale , contribution * rate / autoPumpPresale.PRECISION_MULTIPLIER(), "Mismatch in contribution and total withdrawn tokens after presale.");
+        assertEq(balanceAfterPresale, totalTokensWithdrawn, "Mismatch in total withdrawn tokens after presale.");
+        assertEq(
+            balanceAfterPresale,
+            (contribution * rate) / autoPumpPresale.PRECISION_MULTIPLIER(),
+            "Mismatch in contribution and total withdrawn tokens after presale."
+        );
         vm.stopPrank();
     }
-
 
     function testBuyAndWithdrawTokensAfterWithdrawalPeriod() public {
         // Step 1: Simulate a buyer purchasing tokens before presale ends
         uint256 purchaseAmount = 10 ether;
         vm.deal(buyer1, purchaseAmount);
         vm.startPrank(buyer1);
-        autoPumpPresale.buyTokens{value: purchaseAmount}();
+        autoPumpPresale.buyTokens{ value: purchaseAmount }();
         vm.stopPrank();
 
         // Ensure the contribution is recorded
@@ -355,29 +388,36 @@ contract AutoPumpPresaleTest is Test {
         autoPumpPresale.withdrawTokens();
         vm.stopPrank();
 
-
         // Verify that the tokens have been successfully withdrawn
         uint256 finalTokenBalance = autoPumpToken.balanceOf(buyer1);
         uint256 totalTokensWithdrawn = autoPumpPresale.getTotalTokensWithdrawn(buyer1);
 
-         assertEq(finalTokenBalance, purchaseAmount * rate / autoPumpPresale.PRECISION_MULTIPLIER(), "Tokens should be withdrawn successfully");
-         assertEq(finalTokenBalance, totalTokensWithdrawn, "Mismatch token balance with total tokens withdrawn should be withdrawn successfully");
-         vm.stopPrank();
+        assertEq(
+            finalTokenBalance,
+            (purchaseAmount * rate) / autoPumpPresale.PRECISION_MULTIPLIER(),
+            "Tokens should be withdrawn successfully"
+        );
+        assertEq(
+            finalTokenBalance,
+            totalTokensWithdrawn,
+            "Mismatch token balance with total tokens withdrawn should be withdrawn successfully"
+        );
+        vm.stopPrank();
     }
 
-      // Fuzz Test: Buy Tokens with Randomized Amounts
+    // Fuzz Test: Buy Tokens with Randomized Amounts
     function testBuyTokensFuzz(uint256 _purchaseAmount) public {
         // Assume reasonable ETH contribution amount to avoid out-of-gas errors
         vm.assume(_purchaseAmount < address(this).balance);
 
         bool success;
-        if(_purchaseAmount < 0.5 ether) {
-           vm.expectRevert("Minimum buy amount 0.5 ETH");
-           (success,) =  payable(address(autoPumpPresale)).call{value: _purchaseAmount}("");
-       
-           assertEq(autoPumpPresale.raisedAmount(), 0);
+        if (_purchaseAmount < 0.5 ether) {
+            vm.expectRevert("Minimum buy amount 0.5 ETH");
+            (success, ) = payable(address(autoPumpPresale)).call{ value: _purchaseAmount }("");
+
+            assertEq(autoPumpPresale.raisedAmount(), 0);
         } else {
-          (success,) =  payable(address(autoPumpPresale)).call{value: _purchaseAmount}("");
+            (success, ) = payable(address(autoPumpPresale)).call{ value: _purchaseAmount }("");
             if (_purchaseAmount > fundraisingGoal) {
                 assertTrue(autoPumpPresale.raisedAmount() == fundraisingGoal);
             } else {
@@ -390,31 +430,35 @@ contract AutoPumpPresaleTest is Test {
     // Fuzz Test: Contribute After Presale Ends with Randomized Amounts
     function testBuyTokensAfterPresaleEndsFuzz(uint256 _contributionAfterClose) public {
         autoPumpPresale.closePresale();
-        
+
         vm.assume(_contributionAfterClose >= 0.5 ether && _contributionAfterClose < address(this).balance);
 
         vm.expectRevert("Presale is closed");
-        autoPumpPresale.buyTokens{value: _contributionAfterClose}();
+        autoPumpPresale.buyTokens{ value: _contributionAfterClose }();
     }
 
     // Fuzz Test: Purchase and Withdraw Tokens with Randomized Purchase Amount
     function testBuyAndWithdrawTokensAfterPresaleFuzz(uint256 _purchaseAmount) public {
         // Assume a valid purchase amount to avoid unrealistic scenarios
         vm.assume(_purchaseAmount >= 0.5 ether && _purchaseAmount <= fundraisingGoal);
-        
+
         vm.deal(buyer1, _purchaseAmount);
 
         vm.prank(buyer1);
-        autoPumpPresale.buyTokens{value: _purchaseAmount}();
+        autoPumpPresale.buyTokens{ value: _purchaseAmount }();
 
         // Check if the purchase was successful
-        assertEq(autoPumpPresale.raisedAmount(), _purchaseAmount, "Contribution should be equal to the purchase amount");
+        assertEq(
+            autoPumpPresale.raisedAmount(),
+            _purchaseAmount,
+            "Contribution should be equal to the purchase amount"
+        );
 
         // Close the presale
         // autoPumpPresale may close if the _purchaseAmount = fundraise goal amount
-        if(autoPumpPresale.presaleClosed() == false) {
-           vm.prank(address(this));
-           autoPumpPresale.closePresale();
+        if (autoPumpPresale.presaleClosed() == false) {
+            vm.prank(address(this));
+            autoPumpPresale.closePresale();
         }
         assertTrue(autoPumpPresale.presaleClosed(), "Presale should be marked as closed");
 
@@ -423,7 +467,7 @@ contract AutoPumpPresaleTest is Test {
 
         uint256 eligibleTokensBeforeWithdraw = autoPumpPresale.calculateEligibleTokens(buyer1);
 
-        if(autoPumpPresale.calculateEligibleTokens(buyer1) > 0) {
+        if (autoPumpPresale.calculateEligibleTokens(buyer1) > 0) {
             vm.prank(buyer1);
             autoPumpPresale.withdrawTokens();
         } else {
@@ -432,7 +476,11 @@ contract AutoPumpPresaleTest is Test {
             autoPumpPresale.withdrawTokens();
         }
 
-        assertNotEq(eligibleTokensBeforeWithdraw, _purchaseAmount * rate / autoPumpPresale.PRECISION_MULTIPLIER(), "Withdrawn tokens should not match the full expected allocation because we didn't pass whole withdraw period");
+        assertNotEq(
+            eligibleTokensBeforeWithdraw,
+            (_purchaseAmount * rate) / autoPumpPresale.PRECISION_MULTIPLIER(),
+            "Withdrawn tokens should not match the full expected allocation because we didn't pass whole withdraw period"
+        );
     }
 
     function testGradualWithdrawalAfterPresaleFuzz(uint256 _purchaseAmount, uint256 _daysAfterPresaleClose) public {
@@ -443,12 +491,12 @@ contract AutoPumpPresaleTest is Test {
         // Simulate making a purchase
         vm.deal(buyer1, _purchaseAmount);
         vm.prank(buyer1);
-        autoPumpPresale.buyTokens{value: _purchaseAmount}();
+        autoPumpPresale.buyTokens{ value: _purchaseAmount }();
 
         // Close the presale
         // autoPumpPresale may close if the _purchaseAmount = fundraise goal amount
-        if(autoPumpPresale.presaleClosed() == false) {
-           autoPumpPresale.closePresale();
+        if (autoPumpPresale.presaleClosed() == false) {
+            autoPumpPresale.closePresale();
         }
 
         // Warp time to simulate the days after presale closure for a withdrawal attempt
@@ -459,36 +507,36 @@ contract AutoPumpPresaleTest is Test {
 
         // Simulate withdrawal
         // This requires the actual 'withdrawTokens' method in your contract to support partial withdrawals
-        if(block.timestamp < autoPumpPresale.closedPresaleTime() + autoPumpPresale.LOCKUP_PERIOD_DAYS()){
+        if (block.timestamp < autoPumpPresale.closedPresaleTime() + autoPumpPresale.LOCKUP_PERIOD_DAYS()) {
             vm.prank(buyer1);
             vm.expectRevert("Lockup period not ended");
             autoPumpPresale.withdrawTokens();
 
             // Verify the tokens withdrawn match the expected eligible amount at this point in time
             uint256 actualTokensWithdrawn = autoPumpToken.balanceOf(buyer1);
-        
+
             // The expectedTokens should match the calculated eligible tokens allowed to be withdrawn at this time
             assertEq(actualTokensWithdrawn, 0, "Withdrawn tokens should match eligible amount");
-        } else if(eligibleTokens == 0) {
+        } else if (eligibleTokens == 0) {
             vm.prank(buyer1);
             vm.expectRevert("No tokens available for withdraw");
             autoPumpPresale.withdrawTokens();
 
             // Verify the tokens withdrawn match the expected eligible amount at this point in time
             uint256 actualTokensWithdrawn = autoPumpToken.balanceOf(buyer1);
-        
+
             // The expectedTokens should match the calculated eligible tokens allowed to be withdrawn at this time
             assertEq(actualTokensWithdrawn, 0, "Withdrawn tokens should match eligible amount");
-        } else if(eligibleTokens > 0) {
+        } else if (eligibleTokens > 0) {
             vm.prank(buyer1);
             autoPumpPresale.withdrawTokens();
 
             // Verify the tokens withdrawn match the expected eligible amount at this point in time
             uint256 actualTokensWithdrawn = autoPumpToken.balanceOf(buyer1);
-        
+
             // The expectedTokens should match the calculated eligible tokens allowed to be withdrawn at this time
             assertEq(actualTokensWithdrawn, eligibleTokens, "Withdrawn tokens should match eligible amount");
-        } 
+        }
     }
 
     function testMultiUserContributionFuzz(uint256[10] calldata _contributionAmounts) public {
@@ -503,13 +551,13 @@ contract AutoPumpPresaleTest is Test {
             vm.deal(users[i], _contributionAmounts[i]);
 
             // Simulate user contributing to the presale.
-            if(_contributionAmounts[i] >= 0.5 ether) {
+            if (_contributionAmounts[i] >= 0.5 ether) {
                 vm.prank(users[i]);
-                autoPumpPresale.buyTokens{value: _contributionAmounts[i]}();
+                autoPumpPresale.buyTokens{ value: _contributionAmounts[i] }();
             } else {
                 vm.prank(users[i]);
                 vm.expectRevert("Minimum buy amount 0.5 ETH");
-                autoPumpPresale.buyTokens{value: _contributionAmounts[i]}();  
+                autoPumpPresale.buyTokens{ value: _contributionAmounts[i] }();
             }
 
             // Accumulate total contributions to ensure it doesn't exceed the fundraising goal.
@@ -521,8 +569,8 @@ contract AutoPumpPresaleTest is Test {
 
         // Close the presale after all contributions.
         // autoPumpPresale may close if the _purchaseAmount = fundraise goal amount
-        if(autoPumpPresale.presaleClosed() == false) {
-           autoPumpPresale.closePresale();
+        if (autoPumpPresale.presaleClosed() == false) {
+            autoPumpPresale.closePresale();
         }
 
         // Fast-forward time to allow for withdrawals.
@@ -602,12 +650,11 @@ contract AutoPumpPresaleTest is Test {
     //     }
     // }
 
-
     receive() external payable {}
 }
 
 contract NonReceivable {
-        receive() external payable {
-            revert();
-        }
+    receive() external payable {
+        revert();
+    }
 }
