@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.24;
 
 import "forge-std/console.sol";
 import { Test, console2 } from "forge-std/Test.sol";
@@ -8,7 +8,12 @@ import { AutoPumpPresale } from "../src/AutoPumpPresale.sol";
 import { AutoPump, IAutoPump } from "../src/AutoPump.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import { UNISWAP_V2_ROUTER02, SUSHISWAP_V2_ROUTER02, PANCAKESWAP_V2_ROUTER02, FRAXSWAP_V2_ROUTER02 } from "test/utils/constant_eth.sol";
+import {
+    UNISWAP_V2_ROUTER02,
+    SUSHISWAP_V2_ROUTER02,
+    PANCAKESWAP_V2_ROUTER02,
+    DACKIE_V2_ROUTER02
+} from "test/utils/constant_eth.sol";
 
 contract AutoPumpPresaleTest is Test {
     AutoPumpPresale public autoPumpPresale;
