@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.23;
 
 interface IAutoPumpPresale {
     /// @notice Represents a buyer's purchase information
@@ -17,6 +17,12 @@ interface IAutoPumpPresale {
      * Event for Opening Presale
      */
     event PresaleOpened();
+
+    /**
+     * @dev Emit when new token are set by owner
+     * @param newToken the new token including
+     */
+    event SetToken(address newToken);
 
     /**
      * Event for token purchase logging
@@ -40,10 +46,7 @@ interface IAutoPumpPresale {
      * It is emitted when the owner successfully updates the treasury wallet address
      * using the {setTreasuryWallet} function.
      */
-    event TreasuryWalletUpdated(
-        address indexed oldWallet,
-        address indexed newWallet
-    );
+    event TreasuryWalletUpdated(address indexed oldWallet, address indexed newWallet);
 
     /**
      * @dev low level token purchase ***DO NOT OVERRIDE***
@@ -73,6 +76,13 @@ interface IAutoPumpPresale {
     function closePresale() external;
 
     /**
+     * @dev Set the token address
+     * @dev Only callable by owner
+     * @param newToken address of the new ERC20 token
+     */
+    function setToken(address newToken) external;
+
+    /**
      * @notice Opens the presale, permitting any further purchases.
      * @dev This action is irreversible and can only be performed by the contract owner. It should set the presale state to opened.
      */
@@ -90,18 +100,14 @@ interface IAutoPumpPresale {
      * @param _buyer The address of the buyer.
      * @return The total number of tokens the buyer is eligible to claim.
      */
-    function getTotalTokensWithdrawn(
-        address _buyer
-    ) external view returns (uint256);
+    function getTotalTokensWithdrawn(address _buyer) external view returns (uint256);
 
     /**
      * @dev Calculates the remaining amount of tokens a buyer can claim at the current time.
      * @param _buyer The address of the buyer.
      * @return The number of tokens the buyer can still claim.
      */
-    function calculateEligibleTokens(
-        address _buyer
-    ) external view returns (uint256);
+    function calculateEligibleTokens(address _buyer) external view returns (uint256);
 
     /// @notice Enables buyers to withdraw their allocated tokens after the presale ends.
     /// @dev Should ensure that tokens are only withdrawn in accordance with presale rules.
