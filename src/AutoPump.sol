@@ -179,6 +179,7 @@ contract AutoPump is ERC20, Ownable, IAutoPump {
     ) internal virtual override {
         bool passedLiquifyThreshold = balanceOf(address(this)) >
             liquifyTokenThreshold;
+
         bool passedPumpThreshold = address(this).balance > pumpEthThreshold;
 
         IUniswapV2Router02 router = uniswapV2Router;

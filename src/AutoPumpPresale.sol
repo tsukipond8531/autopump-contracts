@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { IAutoPumpPresale } from "./interfaces/IAutoPumpPresale.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IAutoPumpPresale} from "./interfaces/IAutoPumpPresale.sol";
 
 /**
  * @title AutoPumpPresale
@@ -72,7 +72,12 @@ contract AutoPumpPresale is Ownable, ReentrancyGuard, IAutoPumpPresale {
      * @param fundraisingGoal_ Target fundraising goal for the presale
      * @param rate_ Rate for each token
      */
-    constructor(address wallet_, ERC20 token_, uint256 fundraisingGoal_, uint256 rate_) Ownable(msg.sender) {
+    constructor(
+        address wallet_,
+        ERC20 token_,
+        uint256 fundraisingGoal_,
+        uint256 rate_
+    ) Ownable(msg.sender) {
         require(fundraisingGoal_ > 0, "Invalid Fundraising Goal");
         require(wallet_ != address(0), "Invalid Wallet");
 
@@ -154,7 +159,10 @@ contract AutoPumpPresale is Ownable, ReentrancyGuard, IAutoPumpPresale {
         require(presaleClosed, "Presale not closed yet");
 
         // Ensure the current time is at least 7 days after the presale closed
-        require(block.timestamp >= closedPresaleTime + LOCKUP_PERIOD_DAYS, "Lockup period not ended");
+        require(
+            block.timestamp >= closedPresaleTime + LOCKUP_PERIOD_DAYS,
+            "Lockup period not ended"
+        );
 
         uint256 eligibleTokens = calculateEligibleTokens(msg.sender);
         BuyerInfo storage buyer = buyers[msg.sender];
@@ -173,22 +181,34 @@ contract AutoPumpPresale is Ownable, ReentrancyGuard, IAutoPumpPresale {
         return buyers[buyer_].tokenBalance;
     }
 
-    function getTotalTokensWithdrawn(address buyer_) external view returns (uint256) {
+    function getTotalTokensWithdrawn(
+        address buyer_
+    ) external view returns (uint256) {
         return buyers[buyer_].totalTokensWithdrawn;
     }
 
-    function calculateEligibleTokens(address buyer_) public view returns (uint256) {
+    function calculateEligibleTokens(
+        address buyer_
+    ) public view returns (uint256) {
         BuyerInfo storage buyer = buyers[buyer_];
 
-        if (!presaleClosed || buyer.tokenBalance == 0 || closedPresaleTime + LOCKUP_PERIOD_DAYS > block.timestamp) {
+        if (
+            !presaleClosed ||
+            buyer.tokenBalance == 0 ||
+            closedPresaleTime + LOCKUP_PERIOD_DAYS > block.timestamp
+        ) {
             return 0; // No tokens can be withdrawn if the presale hasn't closed or nothing was purchased.
         }
 
-        uint256 secondsSinceClosure = block.timestamp - (closedPresaleTime + LOCKUP_PERIOD_DAYS);
-        uint256 eligibleTokens = (buyer.tokenBalance * secondsSinceClosure) / WITHDRAWAL_PERIOD_DAYS;
+        uint256 secondsSinceClosure = block.timestamp -
+            (closedPresaleTime + LOCKUP_PERIOD_DAYS);
+        uint256 eligibleTokens = (buyer.tokenBalance * secondsSinceClosure) /
+            WITHDRAWAL_PERIOD_DAYS;
 
         // Ensure we don't exceed the total owned.
-        uint256 totalEligible = eligibleTokens > buyer.tokenBalance ? buyer.tokenBalance : eligibleTokens;
+        uint256 totalEligible = eligibleTokens > buyer.tokenBalance
+            ? buyer.tokenBalance
+            : eligibleTokens;
         return totalEligible - buyer.totalTokensWithdrawn;
     }
 
@@ -210,7 +230,9 @@ contract AutoPumpPresale is Ownable, ReentrancyGuard, IAutoPumpPresale {
             acceptedAmount = msg.value - excess; // Adjust acceptedAmount to exclude excess
 
             // Immediately refund excess funds to the sender.
-            (bool refundSuccess, ) = payable(msg.sender).call{ value: excess }("");
+            (bool refundSuccess, ) = payable(msg.sender).call{value: excess}(
+                ""
+            );
             require(refundSuccess, "Refund failed");
         }
 
@@ -226,7 +248,7 @@ contract AutoPumpPresale is Ownable, ReentrancyGuard, IAutoPumpPresale {
         emit TokenPurchase(msg.sender, acceptedAmount);
 
         // Forward Funds to treasury wallet
-        (bool sent, ) = payable(treasuryWallet).call{ value: acceptedAmount }("");
+        (bool sent, ) = payable(treasuryWallet).call{value: acceptedAmount}("");
         require(sent, "Failed to send Accepted Wei");
     }
 
@@ -245,7 +267,9 @@ contract AutoPumpPresale is Ownable, ReentrancyGuard, IAutoPumpPresale {
      * @param weiAmount_ Value in wei to be converted into tokens
      * @return Number of tokens that can be purchased with the specified _weiAmount
      */
-    function _getTokenAmount(uint256 weiAmount_) internal view returns (uint256) {
+    function _getTokenAmount(
+        uint256 weiAmount_
+    ) internal view returns (uint256) {
         return (weiAmount_ * rate) / PRECISION_MULTIPLIER;
     }
 }

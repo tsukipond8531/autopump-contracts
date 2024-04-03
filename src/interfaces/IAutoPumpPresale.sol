@@ -46,7 +46,10 @@ interface IAutoPumpPresale {
      * It is emitted when the owner successfully updates the treasury wallet address
      * using the {setTreasuryWallet} function.
      */
-    event TreasuryWalletUpdated(address indexed oldWallet, address indexed newWallet);
+    event TreasuryWalletUpdated(
+        address indexed oldWallet,
+        address indexed newWallet
+    );
 
     /**
      * @dev low level token purchase ***DO NOT OVERRIDE***
@@ -100,14 +103,18 @@ interface IAutoPumpPresale {
      * @param _buyer The address of the buyer.
      * @return The total number of tokens the buyer is eligible to claim.
      */
-    function getTotalTokensWithdrawn(address _buyer) external view returns (uint256);
+    function getTotalTokensWithdrawn(
+        address _buyer
+    ) external view returns (uint256);
 
     /**
      * @dev Calculates the remaining amount of tokens a buyer can claim at the current time.
      * @param _buyer The address of the buyer.
      * @return The number of tokens the buyer can still claim.
      */
-    function calculateEligibleTokens(address _buyer) external view returns (uint256);
+    function calculateEligibleTokens(
+        address _buyer
+    ) external view returns (uint256);
 
     /// @notice Enables buyers to withdraw their allocated tokens after the presale ends.
     /// @dev Should ensure that tokens are only withdrawn in accordance with presale rules.

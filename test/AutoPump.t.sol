@@ -60,7 +60,7 @@ contract AutoPumpTest is Test {
 
         vm.startPrank(owner);
         token.setPumpThreshold(1 ether);
-        token.setLiquifyThreshold(totalSupply / 1e3);
+        token.setLiquifyThreshold(type(uint256).max);
         token.approve(UNISWAP_V2_ROUTER02, type(uint256).max);
         token.approve(SUSHISWAP_V2_ROUTER02, type(uint256).max);
         uniswapV2Router.addLiquidityETH{value: 300 ether }(address(token), totalSupply / 4, 0, 0, owner, block.timestamp);
@@ -373,7 +373,7 @@ function testSetRouter() public {
 
     function _testLiquify(address pair, uint256 threshold, uint256 amount) private {
         vm.startPrank(owner);
-        token.transfer(address(token), threshold);
+        token.transfer(address(token), threshold + 1);
         token.setLiquifyThreshold(threshold);
         vm.stopPrank();
 
@@ -383,8 +383,9 @@ function testSetRouter() public {
         token.transfer(seller, amount / 2);
         uint256 afterLiquifyBal = token.balanceOf(address(token));
         uint256 afterLiquifyBal2 = token.balanceOf(pair);
-        
-        // assert(beforeLiquifyBal > afterLiquifyBal);
+    
+        assert(beforeLiquifyBal > afterLiquifyBal);
+
         assert(afterLiquifyBal2 > beforeLiquifyBal2);
 
         vm.prank(owner);
